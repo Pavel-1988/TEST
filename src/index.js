@@ -1,16 +1,55 @@
-(() => {
-    const menuBtnRef = document.querySelector("[data-menu-button]");
-    const mobileMenuRef = document.querySelector("[data-menu]");
-  
-    menuBtnRef.addEventListener("click", () => {
-        const expanded =
-            menuBtnRef.getAttribute("aria-expanded") === "true" || false;
-        
-        menuBtnRef.classList.toggle("is-open");
-        menuBtnRef.setAttribute("aria-expanded", !expanded);
-  
-        mobileMenuRef.classList.toggle("is-open");
-    })
-})();
-  
-import "./js/my-swiper"
+import './css/styles.css';
+import './css/country.css'
+import debounce from 'lodash.debounce';
+import { Notify } from 'notiflix/build/notiflix-notify-aio';
+import { fetchCountries } from './js/fetchCountries';
+import { refs } from './js/refs';
+import {similarMarkup,uniqueMarkup} from './js/markup'
+
+
+const DEBOUNCE_DELAY = 300;
+
+refs.searchInp.addEventListener('input', debounce(onInputCountry, DEBOUNCE_DELAY));
+
+function onInputCountry() {
+    let countryName = refs.searchInp.value;
+   
+    if (countryName === '') {
+        refs.countryList.innerHTML = '';
+        refs.countryInfo.innerHTML = '';
+        return;
+    }
+
+        fetchCountries(countryName)
+        .then(countrys => {
+            if (countrys.length > 10) {
+                Notify.info("Too many matches found. Please enter a more specific name.");
+                refs.countryList.innerHTML = '';
+                refs.countryInfo.innerHTML = '';
+                return
+            }
+            if (countrys.length <= 10) {
+                const similar = countrys.map(country => similarMarkup(country));
+                refs.countryList.innerHTML = similar.join('');
+                refs.countryInfo.innerHTML = '';
+            }
+            if (countrys.length === 1) {
+                const unique = countrys.map(country => uniqueMarkup(country));
+                refs.countryList.innerHTML = '';
+                refs.countryInfo.innerHTML =  unique.join('');
+            }
+            if (countrys.length === 0) {
+                Notify.failure('Oops, there is no country with that name');
+                refs.countryInfo.innerHTML = '';
+                refs.countryList.innerHTML = '';          
+             }
+
+        })
+            
+        .catch(error => {
+            Notify.failure('Oops, there is no country with that name');
+            return error.message;
+        })
+    
+}
+
